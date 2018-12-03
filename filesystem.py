@@ -1,6 +1,6 @@
 # Python's Libraries
 # import re
-# import shutil
+import shutil
 import os
 
 # Own's Libraries
@@ -15,7 +15,7 @@ class Folder(object):
     def __str__(self):
         return self.abspath
 
-    def is_Exist(self, _origin="", _raise_error_on=None):
+    def is_Exist(self, _raise_error_on=None):
         value = os.path.exists(self.abspath)
         if value:
             if _raise_error_on:
@@ -23,7 +23,7 @@ class Folder(object):
                     "validacion",
                     "La carpeta '%s' ya existe" % (self.abspath),
                     "carpeta existe",
-                    _origin
+                    ""
                 )
             return True
         else:
@@ -32,7 +32,7 @@ class Folder(object):
                     "validacion",
                     "La carpeta '%s' no existe" % (self.abspath),
                     "carpeta no existe",
-                    _origin,
+                    "",
                 )
             return False
 
@@ -57,6 +57,16 @@ class Folder(object):
             print ("Carpeta '%s' creada con exito" % (self.abspath))
             return True
         else:
+            if self.is_Exist():
+                error = Error(
+                    "validacion",
+                    "La carpeta '%s' ya existe" % (self.abspath),
+                    "carpeta existe",
+                    ""
+                )
+                print(error)
+                return False
+
             try:
                 if _create_struct is False:
                     if folder_base.is_Exist() is False:
@@ -77,78 +87,93 @@ class Folder(object):
             except Exception as error:
                 print(str(error))
 
-    def get_QtyFiles(self, num_levels=None):
+    def get_QtyFiles(self, _num_levels=None):
         self.is_Exist(_raise_error_on=False)
 
         elements = os.walk(self.abspath)
         qty = 0
         level = 0
-        for directory_path, list_dirnames, list_filenames in elements:
-            qty += len(list_filenames)
+        for directory_path, list_dir_names, list_file_names in elements:
+            qty += len(list_file_names)
 
             level += 1
-            if num_levels == level:
+            if _num_levels == level:
                 break
 
         return qty
 
-    def get_QtyFolders(self, num_levels=None):
+    def get_QtyFolders(self, _num_levels=None):
         self.is_Exist(_raise_error_on=False)
 
         elements = os.walk(self.abspath)
         qty = 0
         level = 0
-        for directory_path, list_dirnames, list_filenames in elements:
-            qty += len(list_dirnames)
+        for directory_path, list_dir_names, list_file_names in elements:
+            qty += len(list_dir_names)
 
             level += 1
-            if num_levels == level:
+            if _num_levels == level:
                 break
 
         return qty
 
-    def get_QtyElements(self, num_levels=None):
+    def get_QtyElements(self, _num_levels=None, _summary=False):
         self.is_Exist(_raise_error_on=False)
 
         elements = os.walk(self.abspath)
-        qty_files = 0
-        qty_folders = 0
-        level = 0
-        for directory_path, list_dirnames, list_filenames in elements:
-            qty_files += len(list_dirnames)
-            qty_folders += len(list_filenames)
 
-            level += 1
-            if num_levels == level:
-                break
+        if _summary:
+            qty_elements = 0
+            level = 0
+            for directory_path, list_dir_names, list_file_names in elements:
+                qty_elements += len(list_dir_names)
+                qty_elements += len(list_file_names)
 
-        return qty_folders, qty_files
+                level += 1
+                if _num_levels == level:
+                    break
 
-    def get_Files(self, num_levels=None):
+            return qty_elements
+
+        else:
+            qty_files = 0
+            qty_folders = 0
+            level = 0
+            for directory_path, list_dir_names, list_file_names in elements:
+                qty_files += len(list_dir_names)
+                qty_folders += len(list_file_names)
+
+                level += 1
+                if _num_levels == level:
+                    break
+
+            return qty_folders, qty_files
+
+    def get_Files(self, _num_levels=None):
         self.is_Exist(_raise_error_on=False)
 
         level = 0
         list_files = []
         elements = os.walk(self.abspath)
-        for directory_path, list_dirnames, list_filenames in elements:
-            for file_name in list_filenames:
+        for directory_path, list_dir_names, list_file_names in elements:
+            for file_name in list_file_names:
                 folder = Folder(directory_path)
                 file = File(folder, file_name)
                 list_files.append(file)
             level += 1
-            if num_levels == level:
+            if _num_levels == level:
                 break
 
         return list_files
 
-    def get_Folders(self, num_levels=None):
+    def get_Folders(self, _num_levels=None):
         self.is_Exist(_raise_error_on=False)
 
         level = 0
         list_folders = []
         elements = os.walk(self.abspath)
-        for directory_path, list_dirnames, list_filenames in elements:
-            for dir_name in list_dirnames:
+        for directory_path, list_dir_names, list_file_names in elements:
+            for dir_name in list_dir_names:
                 path = os.path.join(
                     directory_path,
                     dir_name
@@ -156,10 +181,142 @@ class Folder(object):
                 folder = Folder(path)
                 list_folders.append(folder)
             level += 1
-            if num_levels == level:
+            if _num_levels == level:
                 break
 
         return list_folders
+
+    def find_File_ByName(self, _file_name):
+        self.is_Exist(_raise_error_on=False)
+
+        list_folders = []
+        elements = os.walk(self.abspath)
+        for directory_path, list_dir_names, list_file_names in elements:
+            for file_name in list_file_names:
+                (title, extension) = os.path.splitext(file_name)
+                (ftile, fextension) = os.path.splitext(_file_name)
+
+                if title.upper() == ftile.upper() and \
+                   extension.upper() == fextension.upper():
+                    folder = Folder(directory_path)
+                    file = File(folder, file_name)
+                    list_folders.append(file)
+
+        return list_folders
+
+    def find_File_ByExtension(self, _extension):
+        self.is_Exist(_raise_error_on=False)
+
+        list_folders = []
+        elements = os.walk(self.abspath)
+        for directory_path, list_dir_names, list_file_names in elements:
+            for file_name in list_file_names:
+                (title, extension) = os.path.splitext(file_name)
+
+                if extension.upper() == _extension.upper():
+                    folder = Folder(directory_path)
+                    file = File(folder, file_name)
+                    list_folders.append(file)
+
+        return list_folders
+
+    def add_Folders(self, _list_folder_names, _raise_errors=False):
+
+        if _raise_errors:
+            self.is_Exist(_raise_error_on=False)
+            for folder_name in _list_folder_names:
+                path = os.path.join(self.abspath, folder_name)
+                new_folder = Folder(path)
+                new_folder.create(_raise_errors=True)
+
+            return True
+        else:
+            if self.is_Exist():
+                for folder_name in _list_folder_names:
+                    path = os.path.join(self.abspath, folder_name)
+                    new_folder = Folder(path)
+                    new_folder.create()
+                return True
+
+            else:
+                error = Error(
+                    "validacion",
+                    "La carpeta '%s' no existe" % (self.abspath),
+                    "carpeta no existe",
+                    "",
+                )
+                print(error)
+                return False
+
+    def delete(self, _with_content=False, _raise_errors=False):
+        content_qty = 0
+        if _raise_errors:
+            self.is_Exist(_raise_error_on=False)
+            content_qty = self.get_QtyElements(
+                _num_levels=1,
+                _summary=True
+            )
+            if _with_content is False:
+                if content_qty:
+                    raise Error(
+                        "validacion",
+                        "La carpeta '%s' contiene archivos "
+                        "o carpetas, por lo tanto no se puede "
+                        "eliminar" % (self.abspath),
+                        "no se puede eliminar",
+                        "",
+                    )
+
+            shutil.rmtree(self.abspath)
+        else:
+            if self.is_Exist():
+                content_qty = self.get_QtyElements(
+                    _num_levels=1,
+                    _summary=True
+                )
+                if _with_content is False:
+                    if content_qty:
+                        error = Error(
+                            "validacion",
+                            "La carpeta '%s' contiene archivos "
+                            "o carpetas, por lo tanto no se puede "
+                            "eliminar" % (self.abspath),
+                            "no se puede eliminar",
+                            "",
+                        )
+                        print(error)
+                        return False
+
+                try:
+                    shutil.rmtree(self.abspath)
+                except Exception as error:
+                    print(str(error))
+            else:
+                error = Error(
+                    "validacion",
+                    "La carpeta '%s' no existe" % (self.abspath),
+                    "carpeta no existe",
+                    "",
+                )
+                print(error)
+                return False
+
+        if content_qty:
+            print(
+                "La carpeta '%s' y su contenido de '%s' elementos fue "
+                "eliminada con exito." % (
+                    self.abspath, content_qty
+                )
+            )
+        else:
+            print(
+                "La carpeta '%s' fue eliminada "
+                "con exito." % self.abspath
+            )
+        return True
+
+    def __repr__(self):
+        return self.name.encode('ascii', 'ignore').decode('ascii')
 
 
 class File(object):
@@ -196,7 +353,7 @@ class File(object):
         )
         return abspath
 
-    def is_Exist(self, _origin="", _raise_error_on=None):
+    def is_Exist(self, _raise_error_on=None):
         value = os.path.isfile(self.get_Abspath())
         if value:
             if _raise_error_on:
@@ -204,8 +361,7 @@ class File(object):
                     "validacion",
                     "El archivo '%s' ya existe" % (self.get_Abspath()),
                     "archivo existe",
-                    _origin,
-
+                    ""
                 )
             return True
         else:
@@ -214,7 +370,7 @@ class File(object):
                     "validacion",
                     "El archivo '%s' no existe" % (self.get_Abspath()),
                     "archivo no existe",
-                    _origin
+                    ""
                 )
             return False
 
@@ -287,93 +443,41 @@ class File(object):
             except Exception as error:
                 print(str(error))
 
+    def delete(self, _raise_errors=False):
+        if _raise_errors:
+            self.is_Exist(_raise_error_on=False)
+            os.remove(self.get_Abspath())
 
+        else:
+            if self.is_Exist():
+                try:
+                    os.remove(self.get_Abspath())
+                except Exception as error:
+                    print(str(error))
+            else:
+                error = Error(
+                    "validacion",
+                    "El archivo '%s' no existe" % (self.get_Abspath()),
+                    "archivo no existe",
+                    ""
+                )
+                print(error)
+                return False
 
+        print(
+            "El archivo '%s' fue eliminado "
+            "con exito." % self.get_Abspath()
+        )
+        return True
 
-    # def copy(self, _folder_to, _replace=False):
+    def copy(self, _folder_to, _replace=False):
+        pass
 
-    #     origin = "Archivo.copy()"
+    def move(self, _folder_to, _replace=False):
+        pass
 
-    #     self.exist(origin)
+    def write(self, _value):
+        pass
 
-    #     carpeta_destino = _folder_to
-    #     # carpeta_destino = Carpeta(_basepath_to)
-    #     carpeta_destino.exist(origin)
-
-    #     archivo_nuevo = Archivo(carpeta_destino, self.nombre)
-
-    #     if _replace is False:
-    #         archivo_nuevo.not_Exist(origin)
-
-    #     try:
-    #         shutil.copy(self.get_Abspath(), archivo_nuevo.get_Abspath())
-    #         print "Se copio archivo %s al folder %s" % (
-    #             archivo_nuevo.nombre,
-    #             archivo_nuevo.carpeta.abspath
-    #         )
-
-    #     except Exception as error:
-    #         raise Error(
-    #             type(error).__name__,
-    #             origin,
-    #             "",
-    #             str(error)
-    #         )
-
-    # def move(self, _folder_to, _replace=False):
-
-    #     origin = "Archivo.move()"
-
-    #     self.exist(origin)
-
-    #     carpeta_destino = _folder_to
-    #     # carpeta_destino = Carpeta(_basepath_new)
-    #     carpeta_destino.exist(origin)
-
-    #     archivo_nuevo = Archivo(carpeta_destino, self.nombre)
-
-    #     if _replace is False:
-    #         archivo_nuevo.not_Exist(origin)
-
-    #     try:
-
-    #         shutil.move(self.get_Abspath(), archivo_nuevo.get_Abspath())
-
-    #         self.carpeta_old = self.carpeta
-    #         self.carpeta = carpeta_destino
-
-    #         print "Se movio archivo %s al folder %s" % (
-    #             archivo_nuevo.nombre,
-    #             archivo_nuevo.carpeta.abspath
-    #         )
-
-    #     except Exception as error:
-    #         raise Error(
-    #             type(error).__name__,
-    #             origin,
-    #             "",
-    #             str(error)
-    #         )
-
-    # def write(self, _value):
-    #     """ Metodo que permite escribir en un archivo.
-
-    #         En caso de que no exista, crea el archivo
-
-    #     """
-    #     origin = "Archivo.write()"
-
-    #     try:
-    #         self.file_object = open(self.get_Abspath(), "wb")
-    #         self.file_object.write(_value)
-    #         self.file_object.close()
-
-    #         print "Archivo %s guardado en el folder %s" % (self.nombre, self.carpeta.abspath)
-
-    #     except Exception, error:
-    #         raise Error(
-    #             type(error).__name__,
-    #             origin,
-    #             "",
-    #             str(error)
-    #         )
+    def __repr__(self):
+        return self.name.encode('ascii', 'ignore').decode('ascii')

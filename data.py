@@ -7,23 +7,23 @@ class Error(Exception):
         type = Especifica el tipo de error, en caso de ser un
                error lanzado por el usuario se sugiere utilizar
                el valor 'validacion'.
-        origen = Funcion donde se dispara el error.
+        message = Descripcion del error.
         control = Variable utilizada por otros programas para
                   validar resultado.
-        message = Descripcion del error.
+        origen = Funcion donde se dispara el error.
     """
 
-    def __init__(self, _type, _message, _origin="", _control=""):
+    def __init__(self, _type, _message, _control="", _origin=""):
         self.type = _type
         self.message = _message
-        self.origen = _origin
         self.control = _control
+        self.origen = _origin
 
     def __str__(self):
         msg = "[%s]....%s - (%s)" % (
             self.type,
             self.message,
-            self.origen
+            self.control
         )
 
         return repr(msg)
