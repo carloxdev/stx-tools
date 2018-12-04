@@ -443,6 +443,27 @@ class File(object):
             except Exception as error:
                 print(str(error))
 
+    def get_Object(self, _raise_errors=False):
+        obj = None
+        if _raise_errors:
+            self.is_Exist(_raise_error_on=False)
+            obj = open(self.get_Abspath())
+        else:
+            if self.is_Exist():
+                try:
+                    obj = open(self.get_Abspath())
+                except Exception as error:
+                    print(str(error))
+            else:
+                error = Error(
+                    "validacion",
+                    "El archivo '%s' no existe" % (self.get_Abspath()),
+                    "archivo no existe",
+                    ""
+                )
+                print(error)
+        return obj
+
     def delete(self, _raise_errors=False):
         if _raise_errors:
             self.is_Exist(_raise_error_on=False)
