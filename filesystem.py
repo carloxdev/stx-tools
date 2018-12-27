@@ -2,6 +2,7 @@
 # import re
 import shutil
 import os
+from pathlib import Path
 
 # Own's Libraries
 from stxtools.data import Error
@@ -11,20 +12,35 @@ class Folder(object):
 
     def __init__(self, _abspath):
         self.abspath = _abspath
+        self.name = Path(_abspath).parts[-1]
 
     def __str__(self):
         return self.abspath
 
+    def get_Abspath(self):
+        return self.abspath
+
     def is_Exist(self, _raise_error_on=None):
+        """Metodo que valida la existencia de la carpeta.
+
+        Args:
+            _raise_error_on (:obj:`bool`, optional): Si se recibe True se
+                lanzara una excepción si el folder existe. En caso de False
+                se lanzara la excepción si este no existe.
+
+        Returns:
+            bool: True si el folder existe. False si no existe.
+        """
         value = os.path.exists(self.abspath)
         if value:
             if _raise_error_on:
                 raise Error(
                     "validacion",
                     "La carpeta '%s' ya existe" % (self.abspath),
-                    "carpeta existe",
+                    "carpeta ya existe",
                     ""
                 )
+
             return True
         else:
             if _raise_error_on is False:
@@ -34,6 +50,7 @@ class Folder(object):
                     "carpeta no existe",
                     "",
                 )
+
             return False
 
     def get_Basepath(self):
@@ -46,46 +63,44 @@ class Folder(object):
         return basepath
 
     def create(self, _raise_errors=False, _create_struct=False):
+        if self.is_Exist():
+            error = Error(
+                "validacion",
+                "La carpeta '%s' ya existe" % (self.abspath),
+                "carpeta ya existe",
+                ""
+            )
+            if _raise_errors:
+                raise error
+
+            print(error)
+            return False
+
         folder_base = Folder(self.get_Basepath())
-
-        if _raise_errors:
+        if folder_base.is_Exist() is False:
             if _create_struct is False:
-                folder_base.is_Exist(_raise_error_on=False)
-
-            self.is_Exist(_raise_error_on=True)
-            os.makedirs(self.abspath)
-            print ("Carpeta '%s' creada con exito" % (self.abspath))
-            return True
-        else:
-            if self.is_Exist():
                 error = Error(
                     "validacion",
-                    "La carpeta '%s' ya existe" % (self.abspath),
-                    "carpeta existe",
+                    "No existe el directorio padre '%s'" % (
+                        folder_base
+                    ),
+                    "carpeta no existe",
                     ""
                 )
+                if _raise_errors:
+                    raise error
                 print(error)
                 return False
 
-            try:
-                if _create_struct is False:
-                    if folder_base.is_Exist() is False:
-                        error = Error(
-                            "validacion",
-                            "No existe el directorio padre '%s'" % (
-                                folder_base
-                            ),
-                            "no existe directorio",
-                            ""
-                        )
-                        print(error)
-                        return False
-
-                os.makedirs(self.abspath)
-                print ("Carpeta '%s' creada con exito" % (self.abspath))
-
-            except Exception as error:
-                print(str(error))
+        try:
+            os.makedirs(self.abspath)
+            print("Carpeta '%s' creada con exito" % (self.abspath))
+            return True
+        except Exception as error:
+            if _raise_errors:
+                raise error
+            print(str(error))
+            return False
 
     def get_QtyFiles(self, _num_levels=None):
         self.is_Exist(_raise_error_on=False)
@@ -221,99 +236,77 @@ class Folder(object):
         return list_folders
 
     def add_Folders(self, _list_folder_names, _raise_errors=False):
+        if self.is_Exist() is False:
+            error = Error(
+                "validacion",
+                "La carpeta '%s' no existe" % (self.abspath),
+                "carpeta no existe",
+                "",
+            )
+            if _raise_errors:
+                raise error
 
-        if _raise_errors:
-            self.is_Exist(_raise_error_on=False)
-            for folder_name in _list_folder_names:
-                path = os.path.join(self.abspath, folder_name)
-                new_folder = Folder(path)
-                new_folder.create(_raise_errors=True)
+            print(error)
+            return False
 
-            return True
-        else:
-            if self.is_Exist():
-                for folder_name in _list_folder_names:
-                    path = os.path.join(self.abspath, folder_name)
-                    new_folder = Folder(path)
-                    new_folder.create()
-                return True
-
-            else:
-                error = Error(
-                    "validacion",
-                    "La carpeta '%s' no existe" % (self.abspath),
-                    "carpeta no existe",
-                    "",
-                )
-                print(error)
-                return False
+        for folder_name in _list_folder_names:
+            path = os.path.join(self.abspath, folder_name)
+            new_folder = Folder(path)
+            new_folder.create(_raise_errors=_raise_errors)
+        return True
 
     def delete(self, _with_content=False, _raise_errors=False):
-        content_qty = 0
-        if _raise_errors:
-            self.is_Exist(_raise_error_on=False)
-            content_qty = self.get_QtyElements(
-                _num_levels=1,
-                _summary=True
+        if self.is_Exist() is False:
+            error = Error(
+                "validacion",
+                "La carpeta '%s' no existe" % (self.abspath),
+                "carpeta no existe",
+                "",
             )
-            if _with_content is False:
-                if content_qty:
-                    raise Error(
-                        "validacion",
-                        "La carpeta '%s' contiene archivos "
-                        "o carpetas, por lo tanto no se puede "
-                        "eliminar" % (self.abspath),
-                        "no se puede eliminar",
-                        "",
-                    )
+            if _raise_errors:
+                raise error
 
-            shutil.rmtree(self.abspath)
-        else:
-            if self.is_Exist():
-                content_qty = self.get_QtyElements(
-                    _num_levels=1,
-                    _summary=True
-                )
-                if _with_content is False:
-                    if content_qty:
-                        error = Error(
-                            "validacion",
-                            "La carpeta '%s' contiene archivos "
-                            "o carpetas, por lo tanto no se puede "
-                            "eliminar" % (self.abspath),
-                            "no se puede eliminar",
-                            "",
-                        )
-                        print(error)
-                        return False
+            print(error)
+            return False
 
-                try:
-                    shutil.rmtree(self.abspath)
-                except Exception as error:
-                    print(str(error))
-            else:
+        content_qty = self.get_QtyElements(
+            _num_levels=1,
+            _summary=True
+        )
+        if _with_content is False:
+            if content_qty:
                 error = Error(
                     "validacion",
-                    "La carpeta '%s' no existe" % (self.abspath),
-                    "carpeta no existe",
+                    "La carpeta '%s' contiene archivos "
+                    "o carpetas, por lo tanto no se puede "
+                    "eliminar" % (self.abspath),
+                    "no se puede eliminar",
                     "",
                 )
+                if _raise_errors:
+                    raise error
+
                 print(error)
                 return False
 
-        if content_qty:
+        try:
+            shutil.rmtree(self.abspath)
+            msg_qty = ""
+            if content_qty:
+                msg_qty = "y su contenido de '%s' elementos" % content_qty
             print(
-                "La carpeta '%s' y su contenido de '%s' elementos fue "
-                "eliminada con exito." % (
-                    self.abspath, content_qty
-                )
+                "La carpeta '%s' %s fue eliminada "
+                "con exito." % (self.abspath, msg_qty)
             )
-        else:
-            print(
-                "La carpeta '%s' fue eliminada "
-                "con exito." % self.abspath
-            )
-        return True
+            return True
+        except Exception as error:
+            if _raise_errors:
+                raise error
+            print(str(error))
+            return False
+
+    def delete_Content(self):
+        pass
 
     def __repr__(self):
         return self.name.encode('ascii', 'ignore').decode('ascii')
@@ -322,14 +315,14 @@ class Folder(object):
 class File(object):
     """Objeto para el manejo de archivos.
 
-    ATRIBUTOS:
-        name = Nombre del archivo con todo y extensión.
-        title = Nombre del archivo sin extensión.
-        extension = Extensión del archivo.
-        folder = Objeto de tipo Folder (ver definicion de la clase)
-        folder_old = Objeto de tipo folder que representa el anterior
-                     folder, al mover el archivo
-        obj = Objecto de tipo FileObject de python.
+    Attributes:
+        name (str): Nombre del archivo con todo y extensión.
+        title (str): Nombre del archivo sin extensión.
+        extension (str): Extensión del archivo.
+        folder (Folder): Carpeta que contiene el archivo
+        folder_old (Folder): Cuando se mueve el archivo, este atributo
+            guarda temporalmente el folder anterior
+        obj (FileObject): Objecto de python para operaciones avanzadas.
     """
 
     def __init__(self, _folder, _name):
@@ -354,6 +347,16 @@ class File(object):
         return abspath
 
     def is_Exist(self, _raise_error_on=None):
+        """Metodo que valida la existencia del archivo.
+
+        Args:
+            _raise_error_on (:obj:`bool`, optional): Si se recibe True se
+                lanzara una excepción si el archivo existe. En caso de False
+                se lanzara la excepción si este no existe.
+
+        Returns:
+            bool: True si el archivo existe. False si no existe.
+        """
         value = os.path.isfile(self.get_Abspath())
         if value:
             if _raise_error_on:
@@ -363,6 +366,7 @@ class File(object):
                     "archivo existe",
                     ""
                 )
+            print()
             return True
         else:
             if _raise_error_on is False:
@@ -403,10 +407,12 @@ class File(object):
     def create(self, _overwrite=False, _raise_errors=False):
         """Metodo que crea el archivo en el sistema de archivos.
 
-        PARAMETERS:
-            _overwrite: Si se recibe True en caso de no existir el directorio o
-                        el archivo, estos seran creados.
-
+        Args:
+            _overwrite (:obj:`bool`, optional): Si se recibe True en caso de
+                no existir el directorio o el archivo, estos seran creados.
+            _raise_errors (:obj:`bool`, optional): Si se recibe False en caso
+                de error se terminara la ejecución con un error, de lo
+                contrario se mostrar un mensaje en consola.
         """
         if _raise_errors:
             self.folder.is_Exist(_raise_error_on=False)
@@ -491,8 +497,49 @@ class File(object):
         )
         return True
 
-    def copy(self, _folder_to, _replace=False):
-        pass
+    def copy(self, _folder_to, _raise_errors=False):
+        """ Por defaul reemplaza el archivo."""
+        if _folder_to.is_Exist() is False:
+            error = Error(
+                "validacion",
+                "La carpeta destino '%s' no existe" % (
+                    _folder_to.get_Abspath()
+                ),
+                "carpeta no existe",
+                ""
+            )
+            if _raise_errors:
+                raise error
+            print(error)
+            return False
+
+        if self.is_Exist() is False:
+            error = Error(
+                "validacion",
+                "El archivo '%s' no existe" % (self.get_Abspath()),
+                "archivo no existe",
+                ""
+            )
+            if _raise_errors:
+                raise error
+            print(error)
+            return False
+
+        try:
+            file_abspath_to = os.path.join(_folder_to.get_Abspath(), self.name)
+            shutil.copy2(self.get_Abspath(), file_abspath_to)
+
+            print(
+                "El archivo '%s' fue copiado con exito a: \n"
+                "{}" % (self.name, _folder_to.abspath)
+            )
+            return True
+        except Exception as error:
+            if _raise_errors:
+                raise error
+
+            print(str(error))
+            return False
 
     def move(self, _folder_to, _replace=False):
         pass
